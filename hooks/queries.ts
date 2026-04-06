@@ -5,39 +5,48 @@ import type {
   ExamDetail,
   ExamListResponse,
   ExamOverviewV4,
+  ExamRankInfo,
   LastExamOverview,
+  PaperRankInfo,
   UserSnapshot,
 } from '@/types/exam'
 import { formatTimestamp } from '@/utils/time'
 
 export const queryKeys = {
   all: () => ['hfsnext'],
-  examList: () => [...queryKeys.all(), 'examList'],
-  lastExamOverview: () => [...queryKeys.all(), 'lastExamOverview'],
-  examOverview: (examId: number) => [
-    ...queryKeys.all(),
+  authScope: (token?: string) => [...queryKeys.all(), token ?? 'anonymous'],
+  examList: (token?: string) => [...queryKeys.authScope(token), 'examList'],
+  userSnapshot: (token?: string) => [...queryKeys.authScope(token), 'userSnapshot'],
+  lastExamOverview: (token?: string) => [...queryKeys.authScope(token), 'lastExamOverview'],
+  examOverview: (token: string | undefined, examId: string) => [
+    ...queryKeys.authScope(token),
     'examOverview',
     examId,
   ],
-  examOverviewV4: (examId: number) => [
-    ...queryKeys.all(),
+  examOverviewV4: (token: string | undefined, examId: number) => [
+    ...queryKeys.authScope(token),
     'examOverviewV4',
     examId,
   ],
-  examRankInfo: (examId: number) => [
-    ...queryKeys.all(),
+  examRankInfo: (token: string | undefined, examId: number) => [
+    ...queryKeys.authScope(token),
     'examRankInfo',
     examId,
   ],
-  answerPicture: (examId: number, paperId: string, pid: string) => [
-    ...queryKeys.all(),
+  answerPicture: (
+    token: string | undefined,
+    examId: number,
+    paperId: string,
+    pid: string,
+  ) => [
+    ...queryKeys.authScope(token),
     'answerPicture',
     examId,
     paperId,
     pid,
   ],
-  paperRankInfo: (examId: number, paperId: string) => [
-    ...queryKeys.all(),
+  paperRankInfo: (token: string | undefined, examId: number, paperId: string) => [
+    ...queryKeys.authScope(token),
     'paperRankInfo',
     examId,
     paperId,
@@ -46,7 +55,7 @@ export const queryKeys = {
 
 export const useExamListQuery = (token: string | undefined) => {
   return useQuery({
-    queryKey: queryKeys.examList(),
+    queryKey: queryKeys.examList(token),
     queryFn: token
       ? async () => {
           const response = await fetchHFSApiFromServer<ExamListResponse>(
@@ -59,29 +68,22 @@ export const useExamListQuery = (token: string | undefined) => {
           if (!response.ok) {
             throw new Error(response.errMsg || '获取考试列表失败')
           }
-          const newExams: {
-            name: string
-            score: string
-            released: string
-            examId: string
-          }[] = []
-          for (const exam of response.payload.list) {
-            newExams.push({
-              name: exam.name,
-              score: `${exam.score}/${exam.manfen}`,
-              released: formatTimestamp(exam.time),
-              examId: exam.examId,
-            })
-          }
-          return newExams
+          return response.payload.list
         }
       : skipToken,
+    select: (exams) =>
+      exams.map((exam) => ({
+        name: exam.name,
+        score: `${exam.score}/${exam.manfen}`,
+        released: formatTimestamp(exam.time),
+        examId: exam.examId,
+      })),
   })
 }
 
 export const useUserSnapshotQuery = (token: string | undefined) => {
   return useQuery({
-    queryKey: [...queryKeys.all(), 'userSnapshot'],
+    queryKey: queryKeys.userSnapshot(token),
     queryFn: token
       ? async () => {
           const response = await fetchHFSApiFromServer<UserSnapshot>(
@@ -106,7 +108,7 @@ export const useExamOverviewQuery = (
   id?: string,
 ) => {
   return useQuery({
-    queryKey: [...queryKeys.all(), 'examOverview'],
+    queryKey: token && id ? queryKeys.examOverview(token, id) : ['hfsnext', 'examOverview', 'anonymous'],
     queryFn:
       token && id
         ? async () => {
@@ -136,7 +138,7 @@ export const usePaperImageUrlsQuery = (
   pid: string,
 ) => {
   return useQuery({
-    queryKey: queryKeys.answerPicture(examId, paperId, pid),
+    queryKey: queryKeys.answerPicture(token, examId, paperId, pid),
     queryFn: token
       ? async () => {
           const response = await fetchHFSApiFromServer<{ url: string[] }>(
@@ -160,9 +162,77 @@ export const usePaperImageUrlsQuery = (
   })
 }
 
+export const useExamRankInfoQuery = (
+  token: string | undefined,
+  examId?: number,
+) => {
+  return useQuery({
+    queryKey:
+      token && examId !== undefined
+        ? queryKeys.examRankInfo(token, examId)
+        : ['hfsnext', 'examRankInfo', 'anonymous'],
+    queryFn:
+      token && examId !== undefined
+        ? async () => {
+            const response = await fetchHFSApiFromServer<ExamRankInfo>(
+              HFS_APIs.examRankInfo,
+              {
+                method: 'GET',
+                token,
+                getParams: {
+                  examId,
+                },
+              },
+            )
+            if (!response.ok) {
+              throw new Error(response.errMsg || '获取考试排名失败')
+            }
+            return {
+              ...response.payload,
+              defeatRatio:
+                response.payload.defeatRatio ?? response.payload.defeatRation,
+            }
+          }
+        : skipToken,
+  })
+}
+
+export const usePaperRankInfoQuery = (
+  token: string | undefined,
+  examId?: number,
+  paperId?: string,
+) => {
+  return useQuery({
+    queryKey:
+      token && examId !== undefined && paperId
+        ? queryKeys.paperRankInfo(token, examId, paperId)
+        : ['hfsnext', 'paperRankInfo', 'anonymous'],
+    queryFn:
+      token && examId !== undefined && paperId
+        ? async () => {
+            const response = await fetchHFSApiFromServer<PaperRankInfo>(
+              HFS_APIs.paperRankInfo,
+              {
+                method: 'GET',
+                token,
+                getParams: {
+                  examId,
+                  paperId,
+                },
+              },
+            )
+            if (!response.ok) {
+              throw new Error(response.errMsg || '获取单科排名失败')
+            }
+            return response.payload
+          }
+        : skipToken,
+  })
+}
+
 export const useLastExamOverviewQuery = (token: string | undefined) => {
   return useQuery({
-    queryKey: queryKeys.lastExamOverview(),
+    queryKey: queryKeys.lastExamOverview(token),
     queryFn: token
       ? async () => {
           const response = await fetchHFSApiFromServer<LastExamOverview>(
@@ -186,7 +256,10 @@ export const useExamOverviewV4Query = (
   examId?: number,
 ) => {
   return useQuery({
-    queryKey: examId !== undefined ? queryKeys.examOverviewV4(examId) : ['examOverviewV4', 'undefined'],
+    queryKey:
+      token && examId !== undefined
+        ? queryKeys.examOverviewV4(token, examId)
+        : ['hfsnext', 'examOverviewV4', 'anonymous'],
     queryFn:
       token && examId !== undefined
         ? async () => {

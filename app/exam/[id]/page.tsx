@@ -1,6 +1,5 @@
 'use client'
 import html2canvas from 'html2canvas'
-import { useRouter } from 'next/navigation'
 import { use, useCallback, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -15,11 +14,19 @@ import {
   CardTitle,
 } from '@/components/card'
 import Navbar from '@/components/navBar'
-import { GithubSVGIcon } from '@/components/svg'
+import { Button } from '@/components/button'
+import PageHeader from '@/components/page-header'
+import { CenteredPageState, LoadingPageState } from '@/components/page-state'
+import SiteFooter from '@/components/siteFooter'
 import type { ExamObject, ExamRankInfo } from '@/types/exam'
 import { formatTimestamp } from '@/utils/time'
-import { useExamOverviewQuery, useExamOverviewV4Query, useUserSnapshotQuery } from '@/hooks/queries'
-import { useStorage } from '@/hooks/useStorage'
+import {
+  useExamOverviewQuery,
+  useExamOverviewV4Query,
+  useExamRankInfoQuery,
+  useUserSnapshotQuery,
+} from '@/hooks/queries'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 function RankInfoComponent({
   rankInfo,
@@ -64,18 +71,50 @@ function RankInfoComponent({
           </div>
         </div>
       </div>
+      <div className='grid grid-cols-2 gap-4'>
+        <div>
+          <div className='text-gray-500 text-sm dark:text-gray-400'>
+            班级等第
+          </div>
+          <div className='font-medium'>
+            {rankInfo ? rankInfo.rankPart.class : '...'}
+          </div>
+        </div>
+        <div>
+          <div className='text-gray-500 text-sm dark:text-gray-400'>
+            年级等第
+          </div>
+          <div className='font-medium'>
+            {rankInfo ? rankInfo.rankPart.grade : '...'}
+          </div>
+        </div>
+      </div>
     </>
+  )
+}
+
+function SummaryItem({
+  label,
+  value,
+}: {
+  label: string
+  value: string | number
+}) {
+  return (
+    <div>
+      <div className='text-gray-500 text-sm dark:text-gray-400'>{label}</div>
+      <div className='font-medium'>{value}</div>
+    </div>
   )
 }
 
 export default function ExamPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params)
-  const router = useRouter()
   const [displayedPapersMode, setDisplayedPapersMode] = useState<{
     [index: string]: boolean
   }>({})
   const pageRef = useRef(null)
-  const [token, setToken] = useStorage('hfs_token')
+  const { token, isAuthenticated } = useRequireAuth()
   const { data: userSnapshot } = useUserSnapshotQuery(token)
   const advancedMode = userSnapshot?.isMember ?? false
   const {
@@ -84,6 +123,10 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
     isPending: isExamOverviewPending,
   } = useExamOverviewQuery(token, params.id)
   const { data: examOverviewV4 } = useExamOverviewV4Query(
+    token,
+    examOverview?.examId,
+  )
+  const { data: examRankInfo } = useExamRankInfoQuery(
     token,
     examOverview?.examId,
   )
@@ -112,68 +155,68 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
     link.click()
   }, [params.id])
 
-  if (!token) {
-    toast.error('你还没登录，返回登录页')
-    router.push('/login')
+  if (!isAuthenticated) {
     return null
   }
 
   if (isExamOverviewError) {
-    toast.error('获取考试详情失败，请稍后再试')
-    return null
+    return (
+      <CenteredPageState
+        title='获取考试详情失败'
+        description='请稍后重试，或返回上一页重新进入。'
+        tone='danger'
+      />
+    )
   }
 
   if (isExamOverviewPending) {
     return (
-      <div className='flex min-h-screen items-center justify-center p-4'>
-        <Card className='w-full max-w-3xl'>
-          <CardHeader>
-            <CardTitle className='font-bold text-2xl'>正在加载...</CardTitle>
-            <CardDescription>正在获取您的数据，请稍候。</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <LoadingPageState
+        title='正在加载...'
+        description='正在获取您的数据，请稍候。'
+      />
+    )
+  }
+
+  if (!examOverview) {
+    return (
+      <CenteredPageState
+        title='暂无考试详情'
+        description='这个考试暂时没有可展示的数据。'
+      />
     )
   }
 
   const examObject: ExamObject = {
     detail: examOverview,
+    rank: examRankInfo,
   }
 
   return (
     <div
-      className='mx-auto flex min-h-screen select-none flex-col bg-white px-4 pt-6 pb-2 md:px-4 md:pt-6 md:pb-2 dark:bg-gray-900'
+      className='mx-auto flex min-h-screen select-none flex-col bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_28%,_#ffffff_72%)] px-4 pt-4 pb-2 md:px-4 md:pt-6 md:pb-2 dark:bg-gray-900'
       ref={pageRef}
     >
       <Navbar />
       <div className='flex flex-col gap-6 pt-6'>
+        <PageHeader
+          title={examObject.detail.name}
+          description='查看总分、排名和各科答题卡。'
+          backHref='/'
+          backLabel='返回考试列表'
+        />
         <Card>
-          <CardHeader>
-            <CardTitle>
-              {examObject?.detail ? examObject.detail.name : params.id}
-            </CardTitle>
-            <div
-              data-html2canvas-ignore='true'
-              className='flex flex-row gap-3 pt-3'
-            >
-              <div className='grow-0 cursor-pointer rounded-full border border-gray-400 p-1 hover:bg-gray-200'>
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  fill='none'
-                  viewBox='0 0 24 24'
-                  strokeWidth={1.5}
-                  stroke='currentColor'
-                  className='size-5'
-                >
-                  <title>创建并下载截图</title>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    d='m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z'
-                  />
-                </svg>
+          <CardHeader className='gap-4'>
+            <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
+              <div>
+                <CardTitle>{examObject.detail.name}</CardTitle>
+                <CardDescription className='mt-1'>
+                  考试详情与排名概览
+                </CardDescription>
               </div>
-              <div
+              <Button
+                type='button'
+                variant='outline'
                 onClick={() => {
                   toast.promise(
                     createScreenshot(),
@@ -198,105 +241,62 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
                     },
                   )
                 }}
-                className='grow-0 cursor-pointer rounded-full border border-gray-400 p-1 hover:bg-gray-200'
+                className='w-full sm:w-auto'
               >
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  fill='none'
-                  viewBox='0 0 24 24'
-                  strokeWidth={1.5}
-                  stroke='currentColor'
-                  className='size-5'
-                >
-                  <title>创建并下载截图</title>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    d='m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z'
-                  />
-                </svg>
-              </div>
+                导出截图
+              </Button>
+            </div>
+            <div
+              data-html2canvas-ignore='true'
+              className='hidden'
+            >
             </div>
           </CardHeader>
 
           <CardContent className='grid gap-4'>
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  考试名
-                </div>
-                <div className='font-medium'>
-                  {examObject?.detail ? examObject.detail.name : '...'}
-                </div>
-              </div>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  考试发布时间
-                </div>
-                <div className='font-medium'>
-                  {examObject?.detail
-                    ? formatTimestamp(examObject.detail.time as number)
-                    : '...'}
-                </div>
-              </div>
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+              <SummaryItem
+                label='考试名'
+                value={examObject.detail.name}
+              />
+              <SummaryItem
+                label='考试发布时间'
+                value={formatTimestamp(examObject.detail.time as number)}
+              />
             </div>
             <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  满分
-                </div>
-                <div className='font-medium'>
-                  {examObject?.detail ? examObject.detail.manfen : '...'}
-                </div>
-              </div>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  得分
-                </div>
-                <div className='font-medium'>
-                  {examObject?.detail ? examObject.detail.score : '...'}
-                </div>
-              </div>
+              <SummaryItem
+                label='满分'
+                value={examObject.detail.manfen}
+              />
+              <SummaryItem
+                label='得分'
+                value={examObject.detail.score}
+              />
             </div>
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  {advancedMode ? '班级排名/等第' : '班级排名'}
-                </div>
-                <div className='font-medium'>
-                  {examObject?.detail
-                    ? advancedMode
-                      ? `${examObject.detail.classRank} (打败了全班${examObject.detail.classDefeatRatio}%的人)`
-                      : examObject.detail.classRankS
-                    : '...'}
-                </div>
-              </div>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  年级排名
-                </div>
-                <div className='font-medium'>
-                  {examOverviewV4?.compare?.curGradeRank
-                    ? examOverviewV4.compare.curGradeRank
-                    : examObject?.detail?.gradeRank
-                      ? examObject.detail.gradeRank
-                      : '获取失败 无此数据'}
-                </div>
-              </div>
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+              <SummaryItem
+                label={advancedMode ? '班级排名/等第' : '班级排名'}
+                value={
+                  advancedMode
+                    ? `${examObject.detail.classRank} (打败了全班${examObject.detail.classDefeatRatio}%的人)`
+                    : examObject.detail.classRankS
+                }
+              />
+              <SummaryItem
+                label='年级排名'
+                value={
+                  examOverviewV4?.compare?.curGradeRank ??
+                  examObject.detail.gradeRank ??
+                  '获取失败 无此数据'
+                }
+              />
             </div>
             {advancedMode && (
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  {advancedMode ? '年级排名/等第' : '年级排名'}
-                </div>
-                <div className='font-medium'>
-                  {examObject?.detail
-                    ? advancedMode
-                      ? `${examObject.detail.gradeRank} (打败了全年级${examObject.detail.gradeDefeatRatio}%的人)`
-                      : examObject.detail.gradeRankS
-                    : '...'}
-                </div>
-              </div>
+              <SummaryItem
+                label='年级排名/等第'
+                value={`${examObject.detail.gradeRank} (打败了全年级${examObject.detail.gradeDefeatRatio}%的人)`}
+              />
             )}
             {advancedMode && <RankInfoComponent rankInfo={examObject?.rank} />}
           </CardContent>
@@ -304,6 +304,7 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
         <Card>
           <CardHeader>
             <CardTitle>各科分析</CardTitle>
+            <CardDescription>点击学科卡片可展开答题卡与分数详情。</CardDescription>
           </CardHeader>
           <CardContent>
             <div className='grid gap-4'>
@@ -329,43 +330,7 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
           </CardContent>
         </Card>
       </div>
-      <div className='divide-y pt-10'>
-        <div />
-        <div className='flex flex-col justify-between pt-2 md:flex-row'>
-          <span className='flex items-center text-gray-500 text-xs'>
-            Open Source by Roitium on
-            <span className='ml-1 inline-flex items-center'>
-              <a
-                href='https://github.com/yanyao2333/HFS-NEXT'
-                target='_blank'
-                className='ml-1'
-                rel='noreferrer'
-              >
-                <GithubSVGIcon />
-              </a>
-              <a
-                href='https://github.com/yanyao2333/HFS-NEXT'
-                target='_blank'
-                className='ml-1 underline'
-                rel='noreferrer'
-              >
-                yanyao2333/HFS-NEXT
-              </a>
-            </span>
-          </span>
-          <span className='content-center text-gray-500 text-xs'>
-            Powered by{' '}
-            <a
-              href='https://vercel.com'
-              target='_blank'
-              className='underline'
-              rel='noreferrer'
-            >
-              Vercel
-            </a>
-          </span>
-        </div>
-      </div>
+      <SiteFooter />
     </div>
   )
 }

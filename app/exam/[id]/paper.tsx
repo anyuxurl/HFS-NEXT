@@ -1,14 +1,62 @@
 'use client'
 
-import { useState } from 'react'
-import toast from 'react-hot-toast'
+import Link from 'next/link'
 import { Gallery, Item } from 'react-photoswipe-gallery'
 import { Card, CardContent, CardHeader } from '@/components/card'
+import { Progress } from '@/components/ui/progress'
 import type { BasicPaperInfo, PaperRankInfo } from '@/types/exam'
 import 'photoswipe/dist/photoswipe.css'
 import { useStorage } from '@/hooks/useStorage'
-import { usePaperImageUrlsQuery, useUserSnapshotQuery } from '@/hooks/queries'
-import { useRouter } from 'next/navigation'
+import {
+  usePaperImageUrlsQuery,
+  usePaperRankInfoQuery,
+  useUserSnapshotQuery,
+} from '@/hooks/queries'
+
+function PaperRankInfoSection({
+  paperRankInfo,
+}: {
+  paperRankInfo: PaperRankInfo
+}) {
+  return (
+    <div className='grid gap-4 rounded-xl border border-dashed px-4 py-4'>
+      <div className='grid grid-cols-2 gap-4'>
+        <div>
+          <div className='text-gray-500 text-sm'>班级排名/等第</div>
+          <div className='font-medium'>
+            {paperRankInfo.rank.class} ({paperRankInfo.rankPart.class})
+          </div>
+        </div>
+        <div>
+          <div className='text-gray-500 text-sm'>年级排名/等第</div>
+          <div className='font-medium'>
+            {paperRankInfo.rank.grade} ({paperRankInfo.rankPart.grade})
+          </div>
+        </div>
+      </div>
+      <div className='grid grid-cols-2 gap-4'>
+        <div>
+          <div className='text-gray-500 text-sm'>班级平均分</div>
+          <div className='font-medium'>{paperRankInfo.avg.class}</div>
+        </div>
+        <div>
+          <div className='text-gray-500 text-sm'>年级平均分</div>
+          <div className='font-medium'>{paperRankInfo.avg.grade}</div>
+        </div>
+      </div>
+      <div className='grid grid-cols-2 gap-4'>
+        <div>
+          <div className='text-gray-500 text-sm'>班级最高分</div>
+          <div className='font-medium'>{paperRankInfo.highest.class}</div>
+        </div>
+        <div>
+          <div className='text-gray-500 text-sm'>年级最高分</div>
+          <div className='font-medium'>{paperRankInfo.highest.grade}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // 科目详情被隐藏时的样式
 export function PaperHidingComponent(props: {
@@ -24,7 +72,12 @@ export function PaperHidingComponent(props: {
         className='cursor-pointer select-none'
       >
         <div className='flex w-full items-center justify-between'>
-          <div>{props.paper.name}</div>
+          <div className='min-w-0'>
+            <div className='truncate font-medium'>{props.paper.name}</div>
+            <div className='mt-1 text-gray-500 text-sm'>
+              {props.paper.score} / {props.paper.manfen}
+            </div>
+          </div>
           <div className='flex items-center gap-2'>
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -57,23 +110,41 @@ export function PaperShowingComponent({
   changeDisplayMode: (paperId: string) => void
   examId: number
 }) {
-  // TODO: 实施 rank 数据获取
-  const [paperRankInfo, setPaperRankInfo] = useState<PaperRankInfo>()
   const [token] = useStorage('hfs_token')
-  const router = useRouter()
-  const { data: paperImageUrls } = usePaperImageUrlsQuery(
+  const {
+    data: paperImageUrls,
+    isPending: isPaperImageUrlsPending,
+  } = usePaperImageUrlsQuery(
     token,
     examId,
     paper.paperId,
     paper.pid,
   )
   const { data: userSnapshot } = useUserSnapshotQuery(token)
+  const {
+    data: paperRankInfo,
+    isPending: isPaperRankInfoPending,
+    isError: isPaperRankInfoError,
+  } = usePaperRankInfoQuery(token, examId, paper.paperId)
   const advancedMode = userSnapshot?.isMember ?? false
 
   if (!token) {
-    toast.error('请先登录')
-    router.push('/login')
-    return null
+    return (
+      <Card>
+        <CardContent className='px-4 py-6'>
+          <div className='text-gray-500 text-sm'>
+            登录状态已失效，请返回
+            <Link
+              href='/login'
+              className='ml-1 text-sky-500 underline'
+            >
+              登录页
+            </Link>
+            重新登录。
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -85,7 +156,12 @@ export function PaperShowingComponent({
         className='cursor-pointer select-none'
       >
         <div className='flex w-full items-center justify-between'>
-          <div>{paper.name}</div>
+          <div className='min-w-0'>
+            <div className='truncate font-medium'>{paper.name}</div>
+            <div className='mt-1 text-gray-500 text-sm'>
+              {paper.score} / {paper.manfen}
+            </div>
+          </div>
           <div className='flex items-center gap-2'>
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -105,7 +181,7 @@ export function PaperShowingComponent({
         </div>
       </CardHeader>
       <CardContent className='grid select-none gap-4 px-4 pb-4'>
-        <div className='grid grid-cols-2 gap-4'>
+        <div className='grid grid-cols-2 gap-4 rounded-xl bg-gray-50 p-4'>
           <div>
             <div className='text-gray-500 text-sm dark:text-gray-400'>满分</div>
             <div className='font-medium'>{paper.manfen}</div>
@@ -117,85 +193,33 @@ export function PaperShowingComponent({
         </div>
         {advancedMode && (
           <>
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  班级排名/等第
-                </div>
-                <div className='font-medium'>
-                  {paperRankInfo
-                    ? advancedMode
-                      ? `${paperRankInfo.rank.class} (打败了全班${paperRankInfo.defeatRatio.class}%的人)`
-                      : paperRankInfo.rankPart.class
-                    : '...'}
-                </div>
+            {isPaperRankInfoPending ? (
+              <div className='rounded-lg border border-dashed px-4 py-3 text-gray-500 text-sm'>
+                正在加载单科排名分析...
               </div>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  年级排名/等第
-                </div>
-                <div className='font-medium'>
-                  {paperRankInfo
-                    ? advancedMode
-                      ? `${paperRankInfo.rank.grade} (打败了全年级${paperRankInfo.defeatRatio.grade}%的人)`
-                      : paperRankInfo.rankPart.grade
-                    : '...'}
-                </div>
+            ) : null}
+            {paperRankInfo ? (
+              <PaperRankInfoSection paperRankInfo={paperRankInfo} />
+            ) : null}
+            {!isPaperRankInfoPending && !paperRankInfo && isPaperRankInfoError ? (
+              <div className='rounded-lg border border-dashed px-4 py-3 text-gray-500 text-sm'>
+                单科排名接口当前不可用，暂时仅展示分数和答题卡。
               </div>
-            </div>
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  班级最高分
-                </div>
-                <div className='font-medium'>
-                  {paperRankInfo
-                    ? advancedMode
-                      ? paperRankInfo.highest.class
-                      : '根据要求，该数据不允许展示'
-                    : '...'}
-                </div>
-              </div>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  年级最高分
-                </div>
-                <div className='font-medium'>
-                  {paperRankInfo
-                    ? advancedMode
-                      ? paperRankInfo.highest.grade
-                      : '根据要求，该数据不允许展示'
-                    : '...'}
-                </div>
-              </div>
-            </div>
-            <div className='grid grid-cols-2 gap-4'>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  班级平均分
-                </div>
-                <div className='font-medium'>
-                  {paperRankInfo
-                    ? advancedMode
-                      ? paperRankInfo.avg.class
-                      : '根据要求，该数据不允许展示'
-                    : '...'}
-                </div>
-              </div>
-              <div>
-                <div className='text-gray-500 text-sm dark:text-gray-400'>
-                  年级平均分
-                </div>
-                <div className='font-medium'>
-                  {paperRankInfo
-                    ? advancedMode
-                      ? paperRankInfo.avg.grade
-                      : '根据要求，该数据不允许展示'
-                    : '...'}
-                </div>
-              </div>
-            </div>
+            ) : null}
           </>
+        )}
+        {isPaperImageUrlsPending && (
+          <div className='space-y-3'>
+            <div className='text-gray-500 text-sm'>正在加载答题卡...</div>
+            <Progress
+              value={undefined}
+              className='h-2'
+            />
+            <div className='grid gap-4 md:grid-cols-2'>
+              <div className='h-[200px] animate-pulse rounded-lg bg-gray-100' />
+              <div className='h-[200px] animate-pulse rounded-lg bg-gray-100' />
+            </div>
+          </div>
         )}
         <Gallery
           withCaption
@@ -203,7 +227,7 @@ export function PaperShowingComponent({
         >
           <div
             data-html2canvas-ignore='true'
-            className='grid grid-flow-col gap-4'
+            className='-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-2'
           >
             {paperImageUrls?.map((url, index) => {
               return (
@@ -218,14 +242,15 @@ export function PaperShowingComponent({
                     <img
                       ref={ref}
                       onClick={open}
-                      className='cursor-pointer rounded-lg object-cover'
+                      className='h-[220px] w-[280px] shrink-0 snap-start cursor-pointer rounded-xl border bg-white object-cover shadow-sm md:h-[240px] md:w-[340px]'
                       src={url}
                       alt={`${paper.name}_${index}`}
-                      width={300}
+                      loading='lazy'
                       style={{
                         aspectRatio: '300/200',
                         objectFit: 'cover',
                       }}
+                      width={300}
                       height={200}
                     />
                   )}
@@ -233,6 +258,14 @@ export function PaperShowingComponent({
               )
             })}
           </div>
+          {paperImageUrls && paperImageUrls.length === 0 && (
+            <div className='text-gray-500 text-sm'>暂无答题卡图片</div>
+          )}
+          {paperImageUrls && paperImageUrls.length > 0 && (
+            <div className='rounded-full bg-gray-50 px-3 py-1 text-gray-500 text-xs'>
+              左右滑动查看更多答题卡，点击图片可放大。
+            </div>
+          )}
         </Gallery>
       </CardContent>
     </Card>

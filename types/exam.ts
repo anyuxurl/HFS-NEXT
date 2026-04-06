@@ -68,6 +68,10 @@ export interface ExamRankInfo {
     class: number
     grade: number
   }
+  defeatRatio?: {
+    class: number
+    grade: number
+  }
   rankPart: {
     class: string
     grade: string

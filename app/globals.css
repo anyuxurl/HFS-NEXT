@@ -2,6 +2,16 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --app-radius-lg: 1rem;
+  --app-radius-xl: 1.25rem;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8fafc;
+  --app-border: #e5e7eb;
+  --app-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05);
+  --app-shadow-md: 0 12px 28px rgb(15 23 42 / 0.08);
+}
+
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -17,5 +27,20 @@
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@layer components {
+  .app-surface-card {
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-xl);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+  }
+
+  .app-surface-subtle {
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-lg);
+    background: var(--app-surface-muted);
   }
 }

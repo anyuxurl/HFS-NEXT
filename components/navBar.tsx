@@ -40,29 +40,29 @@ export default function Navbar() {
   return (
     <nav
       data-html2canvas-ignore='true'
-      className='flex items-center justify-between rounded-lg border border-gray-200 p-4 shadow-xs'
+      className='app-surface-card flex items-center justify-between gap-3 p-3 backdrop-blur-sm md:p-4'
     >
       <Link href={'/'}>
         <img
           src={'/images/logo.png'}
           alt='Icon'
-          className=' w-28'
+          className='w-24 md:w-28'
         />
       </Link>
       <div
-        className='relative'
+        className='relative min-w-0'
         ref={dropdownRef}
       >
         <button
           onClick={toggleDropdown}
-          className='flex items-center space-x-2 focus:outline-hidden'
+          className='flex max-w-[180px] items-center space-x-2 rounded-full border border-transparent px-2 py-1.5 transition-colors focus:outline-hidden hover:bg-gray-50'
         >
           <div
-            className={
-              'flex gap-1 font-black text-black hover:text-gray-900 dark:text-gray-200 dark:hover:text-white'
-            }
+            className='flex min-w-0 gap-1 font-black text-black hover:text-gray-900 dark:text-gray-200 dark:hover:text-white'
           >
-            {userSnapshot ? userSnapshot.linkedStudent.studentName : '？？？'}
+            <span className='truncate'>
+              {userSnapshot ? userSnapshot.linkedStudent.studentName : '？？？'}
+            </span>
             <div className='flex items-center gap-2'>
               <svg
                 xmlns='http://www.w3.org/2000/svg'
@@ -82,15 +82,15 @@ export default function Navbar() {
           </div>
         </button>
         {dropdownOpen && (
-          <div className='absolute right-0 z-20 mt-2 w-48 rounded-md bg-white py-1 shadow-lg'>
+          <div className='absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-200 bg-white/95 py-1 shadow-lg backdrop-blur-sm'>
             <Link
-              className='block px-4 py-2 text-gray-800 hover:bg-gray-200'
+              className='mx-1 block rounded-lg px-4 py-2 text-gray-800 transition-colors hover:bg-gray-100'
               href={'/settings'}
             >
               设置
             </Link>
             <div
-              className='block cursor-pointer px-4 py-2 text-gray-800 hover:bg-gray-200'
+              className='mx-1 block cursor-pointer rounded-lg px-4 py-2 text-gray-800 transition-colors hover:bg-gray-100'
               onClick={handleLogout}
             >
               退出登录

@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/select'
-import { GithubSVGIcon } from '@/components/svg'
+import SiteFooter from '@/components/siteFooter'
 
 enum loginRoleType {
   parent = 2,
@@ -140,7 +140,7 @@ export default function Login() {
                 </SelectContent>
               </Select>
             </div>
-            <text className='text-gray-500 text-sm dark:text-gray-400'>
+            <p className='text-gray-500 text-sm dark:text-gray-400'>
               忘记账号密码？
               <a
                 href='https://app.haofenshu.com/findPwd/?roleType=2'
@@ -153,7 +153,7 @@ export default function Login() {
               <br />
               <br />
               没有账号密码（微信登录）请先在手机端绑定手机号并设置密码
-            </text>
+            </p>
           </CardContent>
           <CardFooter className='flex-col'>
             <Button
@@ -163,55 +163,10 @@ export default function Login() {
             >
               立即登录
             </Button>
-            <div className='py-2' />
-            <Button
-              className='w-full bg-gray-500'
-              onClick={() => {
-                router.push('/snapshot')
-              }}
-            >
-              已有试卷快照？点我上传
-            </Button>
           </CardFooter>
         </Card>
       </div>
-      <div className='divide-y pt-10'>
-        <div />
-        <div className='flex flex-col justify-between pt-2 md:flex-row'>
-          <span className='flex items-center text-gray-500 text-xs'>
-            Open Source by UselessLab on
-            <span className='ml-1 inline-flex items-center'>
-              <a
-                href='https://github.com/yanyao2333/HFS-NEXT'
-                target='_blank'
-                className='ml-1'
-                rel='noreferrer'
-              >
-                <GithubSVGIcon />
-              </a>
-              <a
-                href='https://github.com/yanyao2333/HFS-NEXT'
-                target='_blank'
-                className='ml-1 underline'
-                rel='noreferrer'
-              >
-                yanyao2333/HFS-NEXT
-              </a>
-            </span>
-          </span>
-          <span className='content-center text-gray-500 text-xs'>
-            Powered by{' '}
-            <a
-              href='https://vercel.com'
-              target='_blank'
-              className='underline'
-              rel='noreferrer'
-            >
-              Vercel
-            </a>
-          </span>
-        </div>
-      </div>
+      <SiteFooter author='UselessLab' />
     </div>
   )
 }
