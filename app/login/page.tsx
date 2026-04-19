@@ -166,7 +166,7 @@ export default function Login() {
           </CardFooter>
         </Card>
       </div>
-      <SiteFooter author='UselessLab' />
+      <SiteFooter />
     </div>
   )
 }
