@@ -1,7 +1,27 @@
 import './globals.css'
+import type { Metadata } from 'next'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster } from 'react-hot-toast'
 import Providers from './provider'
+
+export const metadata: Metadata = {
+  metadataBase: new URL('https://hfs.uselesslab.top'),
+  title: 'HFS NEXT - 下一代好分数',
+  description: '你的下一个好分数，何必是好分数？',
+  icons: { icon: '/favicon.ico' },
+  openGraph: {
+    title: 'HFS NEXT - 下一代好分数',
+    description: '你的下一个好分数，何必是好分数？',
+    images: ['/images/logo.png'],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HFS NEXT - 下一代好分数',
+    description: '你的下一个好分数，何必是好分数？',
+    images: ['/images/logo.png'],
+  },
+}
 
 export default function RootLayout({
   children,
@@ -10,31 +30,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang='zh-CN'>
-      <head>
-        <link
-          rel='icon'
-          href='/favicon.ico'
-          sizes='any'
-        />
-        {/*for OG protocol*/}
-        <meta
-          property='description'
-          content='Next generation frontend for haofenshu.com'
-        />
-        <meta
-          property='og:title'
-          content='HFS NEXT - 下一代好分数'
-        />
-        <meta
-          property='og:description'
-          content='Next generation frontend for haofenshu.com'
-        />
-        <meta
-          property='twitter:card'
-          content='summary_large_image'
-        />
-        <title>HFS NEXT - 下一代好分数</title>
-      </head>
       <body>
         <Providers>
           {children}

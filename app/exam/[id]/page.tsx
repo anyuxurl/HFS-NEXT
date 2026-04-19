@@ -1,5 +1,4 @@
 'use client'
-import html2canvas from 'html2canvas'
 import { use, useCallback, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -144,6 +143,7 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
     if (!pageRef.current) {
       throw new Error('组件根节点ref为null???')
     }
+    const { default: html2canvas } = await import('html2canvas')
     const canvas = await html2canvas(pageRef.current, {
       useCORS: true,
       foreignObjectRendering: true,

@@ -1,5 +1,5 @@
 import { AlertTriangle, Award, BookOpen, TrendingUp } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/card'
 import { Progress } from '@/components/ui/progress'
 import type { ExamDetail, LastExamOverview } from '@/types/exam'
 
@@ -31,13 +31,15 @@ export function RankSummaryCard({
             <Award className={`h-8 w-8 ${iconColor}`} />
             <div>
               <p className='font-bold text-3xl'>{rank}</p>
-              <p className='text-muted-foreground text-sm'>共 {total} 人</p>
+              <p className='text-gray-500 text-sm dark:text-gray-400'>
+                共 {total} 人
+              </p>
             </div>
           </div>
           <div className='text-right'>
             <p className='font-medium text-sm'>击败了</p>
             <p className='font-bold text-2xl text-green-600'>{defeatRatio}%</p>
-            <p className='text-muted-foreground text-sm'>的同学</p>
+            <p className='text-gray-500 text-sm dark:text-gray-400'>的同学</p>
           </div>
         </div>
         <Progress
@@ -109,13 +111,16 @@ export function PaperScoreList({ examDetail }: { examDetail: ExamDetail }) {
               className='flex items-center justify-between border-b pb-3 last:border-b-0 last:pb-0'
             >
               <div className='flex items-center space-x-3'>
-                <BookOpen className='h-5 w-5 text-primary' />
+                <BookOpen className='h-5 w-5 text-sky-500' />
                 <span className='font-medium'>{paper.subject}</span>
               </div>
               <div className='text-right'>
                 <span className='font-bold text-lg'>{paper.score}</span>
                 {paper.manfen && (
-                  <span className='text-muted-foreground text-sm'> / {paper.manfen}</span>
+                  <span className='text-gray-500 text-sm dark:text-gray-400'>
+                    {' '}
+                    / {paper.manfen}
+                  </span>
                 )}
               </div>
             </div>

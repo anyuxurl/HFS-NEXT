@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import type { JSX, SVGProps } from 'react'
 import { Button } from '@/components/button'
 import Navbar from '@/components/navBar'
@@ -52,10 +53,13 @@ export default function ExamSelector() {
       <div className='mx-auto flex min-h-screen flex-col bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_35%,_#ffffff_78%)] px-4 pt-6 pb-2'>
         <div className='mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8'>
           <header className='flex items-center justify-between rounded-[1.5rem] border border-white/70 bg-white/80 px-5 py-4 shadow-sm backdrop-blur-sm'>
-            <img
+            <Image
               src='/images/logo.png'
               alt='HFS NEXT'
-              className='w-28 md:w-32'
+              width={165}
+              height={58}
+              priority
+              className='h-auto w-28 md:w-32'
             />
             <Link
               href='/login'

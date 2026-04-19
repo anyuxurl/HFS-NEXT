@@ -2,6 +2,7 @@
 import { useUserSnapshotQuery } from '@/hooks/queries'
 import { useStorage } from '@/hooks/useStorage'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -17,9 +18,11 @@ export default function Navbar() {
     setDropdownOpen(!dropdownOpen)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: 懒得改
-  const handleClickOutside = (event: { target: any }) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
       setDropdownOpen(false)
     }
   }
@@ -35,7 +38,7 @@ export default function Navbar() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  })
+  }, [])
 
   return (
     <nav
@@ -43,10 +46,13 @@ export default function Navbar() {
       className='app-surface-card flex items-center justify-between gap-3 p-3 backdrop-blur-sm md:p-4'
     >
       <Link href={'/'}>
-        <img
-          src={'/images/logo.png'}
-          alt='Icon'
-          className='w-24 md:w-28'
+        <Image
+          src='/images/logo.png'
+          alt='HFS NEXT'
+          width={165}
+          height={58}
+          priority
+          className='h-auto w-24 md:w-28'
         />
       </Link>
       <div
@@ -54,7 +60,10 @@ export default function Navbar() {
         ref={dropdownRef}
       >
         <button
+          type='button'
           onClick={toggleDropdown}
+          aria-haspopup='menu'
+          aria-expanded={dropdownOpen}
           className='flex max-w-[180px] items-center space-x-2 rounded-full border border-transparent px-2 py-1.5 transition-colors focus:outline-hidden hover:bg-gray-50'
         >
           <div
@@ -82,19 +91,25 @@ export default function Navbar() {
           </div>
         </button>
         {dropdownOpen && (
-          <div className='absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-200 bg-white/95 py-1 shadow-lg backdrop-blur-sm'>
+          <div
+            role='menu'
+            className='absolute right-0 z-20 mt-2 w-48 rounded-xl border border-gray-200 bg-white/95 py-1 shadow-lg backdrop-blur-sm'
+          >
             <Link
+              role='menuitem'
               className='mx-1 block rounded-lg px-4 py-2 text-gray-800 transition-colors hover:bg-gray-100'
               href={'/settings'}
             >
               设置
             </Link>
-            <div
-              className='mx-1 block cursor-pointer rounded-lg px-4 py-2 text-gray-800 transition-colors hover:bg-gray-100'
+            <button
+              type='button'
+              role='menuitem'
+              className='mx-1 block w-full rounded-lg px-4 py-2 text-left text-gray-800 transition-colors hover:bg-gray-100'
               onClick={handleLogout}
             >
               退出登录
-            </div>
+            </button>
           </div>
         )}
       </div>

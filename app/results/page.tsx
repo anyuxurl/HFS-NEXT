@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/card'
 import PageHeader from '@/components/page-header'
 import { CenteredPageState, LoadingPageState } from '@/components/page-state'
 import {

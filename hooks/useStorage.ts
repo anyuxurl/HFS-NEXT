@@ -1,55 +1,49 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
+
+const LOCAL_EVENT = 'hfs-storage'
+
+function subscribe(callback: () => void) {
+  window.addEventListener('storage', callback)
+  window.addEventListener(LOCAL_EVENT, callback)
+  return () => {
+    window.removeEventListener('storage', callback)
+    window.removeEventListener(LOCAL_EVENT, callback)
+  }
+}
 
 /**
- * 在 localStorage 中存储和获取值。
- * @param key - 存储的键名。
- * @param initialValue - 初始值，如果 localStorage 中没有对应的键，则使用此值。
+ * 在 localStorage 中存储和获取值。同 key 的多个实例会自动同步，跨 tab
+ * 通过 storage 事件同步。
  */
 export const useStorage = (key: string, initialValue?: string) => {
-  const [storedValue, setStoredValue] = useState<string | undefined>(() => {
-    try {
-      const item = localStorage.getItem(key)
-      if (item !== null) {
-        return item
+  const value = useSyncExternalStore(
+    subscribe,
+    () => {
+      try {
+        return localStorage.getItem(key) ?? initialValue
+      } catch {
+        return initialValue
       }
-    } catch (error) {
-      console.warn(`在初始化期间读取 localStorage 键 "${key}" 时出错:`, error)
-    }
-    return initialValue
-  })
+    },
+    () => initialValue,
+  )
 
-  useEffect(() => {
-    try {
-      if (storedValue === undefined) {
-        localStorage.removeItem(key)
-      } else {
-        localStorage.setItem(key, storedValue)
+  const setValue = useCallback(
+    (next: string | undefined) => {
+      try {
+        if (next === undefined) {
+          localStorage.removeItem(key)
+        } else {
+          localStorage.setItem(key, next)
+        }
+      } catch (error) {
+        console.warn(`写入 localStorage 键 "${key}" 失败:`, error)
       }
-    } catch (error) {
-      console.warn(`更新 localStorage 键 "${key}" 时出错:`, error)
-    }
-  }, [key, storedValue])
+      window.dispatchEvent(new Event(LOCAL_EVENT))
+    },
+    [key],
+  )
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 循环依赖项
-  useEffect(() => {
-    let newValue: string | undefined
-    try {
-      const item = localStorage.getItem(key)
-      if (item !== null) {
-        newValue = item
-      } else {
-        newValue = initialValue
-      }
-    } catch (error) {
-      console.warn(`因 key 更改而读取 localStorage 键 "${key}" 时出错:`, error)
-      newValue = initialValue
-    }
-
-    if (newValue !== storedValue) {
-      setStoredValue(newValue)
-    }
-  }, [key, initialValue])
-
-  return [storedValue, setStoredValue] as const
+  return [value, setValue] as const
 }
