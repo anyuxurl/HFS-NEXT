@@ -14,10 +14,18 @@ import {
   useExamOverviewV4Query,
   useExamListQuery,
   useExamOverviewQuery,
+  useExamRankInfoQuery,
   useLastExamOverviewQuery,
   useUserSnapshotQuery,
 } from '@/hooks/queries'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+
+const pickPositive = (...values: Array<number | undefined>) => {
+  for (const v of values) {
+    if (typeof v === 'number' && v > 0) return v
+  }
+  return undefined
+}
 
 export default function ResultsPage() {
   const { token, isAuthenticated } = useRequireAuth()
@@ -40,17 +48,37 @@ export default function ResultsPage() {
     token,
     examDetail?.examId,
   )
+  const { data: examRankInfo } = useExamRankInfoQuery(
+    token,
+    examDetail?.examId,
+  )
   const { data: userSnapshot } = useUserSnapshotQuery(token)
   const advancedMode = userSnapshot?.isMember ?? false
   const hasLastExamOverview = Boolean(lastExam && Object.keys(lastExam).length > 0)
-  const fallbackClassDisplay = examDetail?.classRankS || '获取失败 无此数据'
-  const fallbackGradeDisplay =
-    typeof examOverviewV4?.compare?.curGradeRank === 'number' &&
-    examOverviewV4.compare.curGradeRank > 0
-      ? String(examOverviewV4.compare.curGradeRank)
-      : typeof examDetail?.gradeRank === 'number' && examDetail.gradeRank > 0
-        ? String(examDetail.gradeRank)
-        : examDetail?.gradeRankS || '获取失败 无此数据'
+
+  const fallbackClassRankNumber = pickPositive(
+    examRankInfo?.rank?.class,
+    examDetail?.classRank,
+  )
+  const fallbackClassTotal = examRankInfo?.number?.class
+  const fallbackClassDisplay = fallbackClassRankNumber
+    ? typeof fallbackClassTotal === 'number' && fallbackClassTotal > 0
+      ? `${fallbackClassRankNumber} / ${fallbackClassTotal} 人`
+      : String(fallbackClassRankNumber)
+    : examDetail?.classRankS || '获取失败 无此数据'
+
+  const fallbackGradeRankNumber = pickPositive(
+    examOverviewV4?.compare?.curGradeRank,
+    examRankInfo?.rank?.grade,
+    examDetail?.gradeRank,
+  )
+  const fallbackGradeTotal = examRankInfo?.number?.grade
+  const fallbackGradeDisplay = fallbackGradeRankNumber
+    ? typeof fallbackGradeTotal === 'number' && fallbackGradeTotal > 0
+      ? `${fallbackGradeRankNumber} / ${fallbackGradeTotal} 人`
+      : String(fallbackGradeRankNumber)
+    : examDetail?.gradeRankS || '获取失败 无此数据'
+
   const fallbackGradeLevelDisplay = advancedMode
     ? typeof examDetail?.gradeRank === 'number' && examDetail.gradeRank > 0
       ? typeof examDetail.gradeDefeatRatio === 'number' &&

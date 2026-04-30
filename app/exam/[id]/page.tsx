@@ -23,6 +23,7 @@ import {
   useExamOverviewQuery,
   useExamOverviewV4Query,
   useExamRankInfoQuery,
+  useLastExamOverviewQuery,
   useUserSnapshotQuery,
 } from '@/hooks/queries'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -129,6 +130,7 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
     token,
     examOverview?.examId,
   )
+  const { data: lastExam } = useLastExamOverviewQuery(token)
 
   const changeDisplayedMode = useCallback((paperId: string) => {
     setDisplayedPapersMode((prevState) => {
@@ -191,6 +193,54 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
     detail: examOverview,
     rank: examRankInfo,
   }
+
+  const pickPositive = (...values: Array<number | undefined>) => {
+    for (const v of values) {
+      if (typeof v === 'number' && v > 0) return v
+    }
+    return undefined
+  }
+
+  const lastExamMatches =
+    lastExam &&
+    'examId' in lastExam &&
+    lastExam.examId === examObject.detail.examId
+  const lastExamExtend = lastExamMatches ? lastExam.extend : undefined
+
+  const classRankNumber = pickPositive(
+    lastExamExtend?.classRank,
+    examRankInfo?.rank?.class,
+    examObject.detail.classRank,
+  )
+  const classTotal = pickPositive(
+    lastExamExtend?.classStuNum,
+    examRankInfo?.number?.class,
+  )
+  const classDefeat =
+    lastExamExtend?.classDefeatRatio ?? examObject.detail.classDefeatRatio
+  const classRankDisplay = classRankNumber
+    ? advancedMode && typeof classDefeat === 'number' && classDefeat >= 0
+      ? `${classRankNumber} (打败了全班${classDefeat}%的人)`
+      : typeof classTotal === 'number' && classTotal > 0
+        ? `${classRankNumber} / ${classTotal} 人`
+        : String(classRankNumber)
+    : examObject.detail.classRankS || '获取失败 无此数据'
+
+  const gradeRankNumber = pickPositive(
+    examOverviewV4?.compare?.curGradeRank,
+    lastExamExtend?.gradeRank,
+    examRankInfo?.rank?.grade,
+    examObject.detail.gradeRank,
+  )
+  const gradeTotal = pickPositive(
+    lastExamExtend?.gradeStuNum,
+    examRankInfo?.number?.grade,
+  )
+  const gradeRankDisplay = gradeRankNumber
+    ? typeof gradeTotal === 'number' && gradeTotal > 0
+      ? `${gradeRankNumber} / ${gradeTotal} 人`
+      : String(gradeRankNumber)
+    : examObject.detail.gradeRankS || '获取失败 无此数据'
 
   return (
     <div
@@ -276,20 +326,12 @@ export default function ExamPage(props: { params: Promise<{ id: string }> }) {
             </div>
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
               <SummaryItem
-                label={advancedMode ? '班级排名/等第' : '班级排名'}
-                value={
-                  advancedMode
-                    ? `${examObject.detail.classRank} (打败了全班${examObject.detail.classDefeatRatio}%的人)`
-                    : examObject.detail.classRankS
-                }
+                label='班级排名'
+                value={classRankDisplay}
               />
               <SummaryItem
                 label='年级排名'
-                value={
-                  examOverviewV4?.compare?.curGradeRank ??
-                  examObject.detail.gradeRank ??
-                  '获取失败 无此数据'
-                }
+                value={gradeRankDisplay}
               />
             </div>
             {advancedMode && (
